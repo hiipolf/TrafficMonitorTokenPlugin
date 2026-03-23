@@ -13,25 +13,22 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Setup MSVC
-      uses: COMSharp/msvc-dev-cmd@v1
-      with:
-        arch: x64
-        product: Microsoft.VisualStudio.Product.BuildTools
-        version: 17
+    - name: Install C++ Build Tools
+      run: |
+        Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_buildtools.exe' -OutFile vs_buildtools.exe
+        Start-Process -FilePath '.\vs_buildtools.exe' -ArgumentList '--quiet', '--wait', '--norestart', '--nocache', '--add', 'Microsoft.VisualStudio.Workload.VCTools', '--add', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '--add', 'Microsoft.VisualStudio.Component.Windows10SDK.19041', '--add', 'Microsoft.VisualStudio.Component.VC.CMSBuild' -Wait -NoNewWindow        
     
     - name: Build
-      shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+        & "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
         msbuild TokenMonitorPlugin.sln /p:Configuration=Release /p:Platform=x64 /m /v:m /nr:false
         if %ERRORLEVEL% neq 0 exit /b 1        
     
     - name: Copy artifacts
       run: |
-        mkdir artifacts
-        copy "bin\x64\Release\TokenMonitorPlugin.dll" artifacts\ 2>nul
-        copy TokenMonitorConfig.json artifacts\ 2>nul        
+        mkdir artifacts -Force
+        copy "bin\x64\Release\TokenMonitorPlugin.dll" "artifacts\" 2>nul
+        copy TokenMonitorConfig.json "artifacts\" 2>nul        
     
     - name: Upload DLL
       uses: actions/upload-artifact@v4
