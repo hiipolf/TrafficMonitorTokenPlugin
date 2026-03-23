@@ -16,21 +16,18 @@ jobs:
     - name: Build
       shell: powershell
       run: |
-        & "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir="$PWD\bin\" /v:minimal
-        Get-ChildItem -Recurse -Filter "*.dll" | Select-Object FullName        
+        & "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir="bin\" /v:minimal        
     
-    - name: Upload artifacts
+    - name: Copy artifacts
       shell: powershell
       run: |
-        $dll = Get-ChildItem -Recurse -Filter "*.dll" | Select-Object -First 1
-        if ($dll) {
-          Write-Host "Found DLL: $($dll.FullName)"
-          New-Item -ItemType Directory -Path artifacts -Force
-          Copy-Item $dll.FullName -Destination artifacts\
-          Copy-Item TokenMonitorConfig.json -Destination artifacts\ -ErrorAction SilentlyContinue
-        }        
+        Copy-Item -Path "bin\TokenMonitorPlugin.dll" -Destination "artifacts" -Force
+        Copy-Item -Path "TokenMonitorConfig.json" -Destination "artifacts" -Force -ErrorAction SilentlyContinue
+        Get-ChildItem "artifacts"        
+    
+    - name: Upload DLL
       uses: actions/upload-artifact@v4
       with:
         name: TokenMonitorPlugin-dll
-        path: artifacts/
+        path: artifacts
