@@ -13,27 +13,39 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Install Windows SDK
-      run: |
-        Invoke-WebRequest -Uri 'https://download.microsoft.com/download/9/A/5/9A5F7F84-25F4-4670-85B1-EB32F9D87F1E/grmsdkxsd_enu.iso' -OutFile 'grmsdkxsd_enu.iso'
-        7z x grmsdkxsd_enu.iso -oci:sdksetup -y | Out-Null
-        Start-Process -FilePath 'sdksetup\setup.exe' -ArgumentList '/q', '/norestart' -Wait        
+    - name: Setup MSVC
+      uses: azure/setup-vcpkg@v4
+      with:
+        vcpkg CommitID: 2024.08
+        vcpkgArguments: ''
+        installVcpkg: false
     
-    - name: Build with MSVC
+    - name: Find MSVC
+      id: msvc
       run: |
-        msbuild TokenMonitorPlugin.sln /p:Configuration=Release /p:Platform=x64 /m /v:m /nr:false
+        $vsPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools"
+        $msbuild = Get-ChildItem "$vsPath\MSBuild\Current\Bin\MSBuild.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $msbuild) {
+          $msbuild = Get-ChildItem "$vsPath\*\*\Bin\MSBuild.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        }
+        echo "MSBuild path: $msbuild"
+        echo "msbuild_path=$msbuild" >> $env:GITHUB_OUTPUT
+        if (-not $msbuild) { exit 1 }        
+    
+    - name: Build
+      run: |
+        $msbuild = "${{ steps.msvc.outputs.msbuild_path }}"
+        & $msbuild TokenMonitorPlugin.sln /p:Configuration=Release /p:Platform=x64 /m /v:m /nr:false
         if ($LASTEXITCODE -ne 0) { exit 1 }        
     
     - name: Copy artifacts
       run: |
-        Copy-Item "bin\x64\Release\TokenMonitorPlugin.dll" -Destination "." -Force -ErrorAction SilentlyContinue
-        Copy-Item "TokenMonitorConfig.json" -Destination "." -Force        
+        New-Item -ItemType Directory -Path artifacts -Force
+        Copy-Item "bin\x64\Release\TokenMonitorPlugin.dll" -Destination "artifacts\" -Force -ErrorAction SilentlyContinue
+        Copy-Item "TokenMonitorConfig.json" -Destination "artifacts\" -Force        
     
     - name: Upload DLL
       uses: actions/upload-artifact@v4
-      if: exists("TokenMonitorPlugin.dll")
       with:
         name: TokenMonitorPlugin-dll
-        path: |
-          TokenMonitorPlugin.dll
-          TokenMonitorConfig.json      
+        path: artifacts/
