@@ -13,27 +13,24 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Build (Debug x64)
-      shell: cmd
+    - name: Build
+      shell: powershell
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir=bin\ /v:minimal
-        if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%        
+        & "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir="$PWD\bin\" /v:minimal
+        Get-ChildItem -Recurse -Filter "*.dll" | Select-Object FullName        
     
-    - name: Find DLL location
-      shell: cmd
+    - name: Upload artifacts
+      shell: powershell
       run: |
-        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /t:PrintReferences /v:quiet
-        dir /s /b %GITHUB_WORKSPACE%\*.dll 2>nul        
-
-    - name: Copy artifacts
-      shell: cmd
-      run: |
-        for /r %GITHUB_WORKSPACE% %%f in (*.dll) do copy "%%f" .
-        dir /b *.dll 2>nul        
-    
-    - name: Upload DLL
+        $dll = Get-ChildItem -Recurse -Filter "*.dll" | Select-Object -First 1
+        if ($dll) {
+          Write-Host "Found DLL: $($dll.FullName)"
+          New-Item -ItemType Directory -Path artifacts -Force
+          Copy-Item $dll.FullName -Destination artifacts\
+          Copy-Item TokenMonitorConfig.json -Destination artifacts\ -ErrorAction SilentlyContinue
+        }        
       uses: actions/upload-artifact@v4
       with:
         name: TokenMonitorPlugin-dll
-        path: .
+        path: artifacts/
