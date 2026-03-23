@@ -13,14 +13,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Install C++ Build Tools
-      run: |
-        Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_buildtools.exe' -OutFile vs_buildtools.exe
-        Start-Process -FilePath '.\vs_buildtools.exe' -ArgumentList '--quiet', '--wait', '--norestart', '--nocache', '--add', 'Microsoft.VisualStudio.Workload.VCTools', '--add', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '--add', 'Microsoft.VisualStudio.Component.Windows10SDK.19041', '--add', 'Microsoft.VisualStudio.Component.VC.CMSBuild' -Wait -NoNewWindow        
-    
     - name: Build
       run: |
-        & "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+        & "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
         msbuild TokenMonitorPlugin.sln /p:Configuration=Release /p:Platform=x64 /m /v:m /nr:false
         if %ERRORLEVEL% neq 0 exit /b 1        
     
