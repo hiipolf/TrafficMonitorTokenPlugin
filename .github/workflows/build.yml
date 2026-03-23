@@ -14,21 +14,23 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Build (Debug x64)
-      env:
-        VCVARS: "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
       run: |
-        call "%VCVARS%"
+        cd %GITHUB_WORKSPACE%
+        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
         msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir=bin\ /v:minimal
         if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%        
     
-    - name: List output
+    - name: Find DLL
       run: |
-        dir /s /b bin\*.dll 2>nul || echo "No DLL found"        
+        cd %GITHUB_WORKSPACE%
+        for /r %%f in (*.dll) do echo %%f
+        dir /s /b *.dll        
     
     - name: Copy artifacts
       run: |
+        cd %GITHUB_WORKSPACE%
         mkdir artifacts -Force
-        for /r bin %%f in (*.dll) do copy "%%f" artifacts\ 
+        for /r %%f in (*.dll) do copy "%%f" artifacts\
         copy TokenMonitorConfig.json artifacts\ 2>nul        
     
     - name: Upload DLL
