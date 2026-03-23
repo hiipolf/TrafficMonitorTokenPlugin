@@ -13,24 +13,28 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
+    - name: Find VS path
+      shell: cmd
+      run: |
+        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath') do set VS_PATH=%%i
+        echo VS_PATH=%VS_PATH%
+        if "%VS_PATH%"=="" exit /b 1        
+    
     - name: Build (Debug x64)
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath') do set VS_PATH=%%i
+        call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
         msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /v:minimal
         if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%        
-    
-    - name: Show output
-      shell: cmd
-      run: |
-        dir /s /b %GITHUB_WORKSPACE%\bin\*.dll        
     
     - name: Copy artifacts
       shell: cmd
       run: |
         mkdir artifacts
         for /r "%GITHUB_WORKSPACE%\bin" %%f in (*.dll) do copy "%%f" artifacts\
-        copy TokenMonitorConfig.json artifacts\ 2>nul        
+        copy TokenMonitorConfig.json artifacts\ 2>nul
+        dir artifacts\        
     
     - name: Upload
       uses: actions/upload-artifact@v4
