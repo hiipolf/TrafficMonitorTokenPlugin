@@ -13,23 +13,25 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Setup MSVC
-      uses: epick触及aras/msvc-dev-cmd@v1
-      with:
-        arch: x64
-    
     - name: Build
       shell: cmd
       run: |
-        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /v:minimal
+        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir=bin\ /v:minimal
         if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%        
+    
+    - name: Show DLL location
+      shell: cmd
+      run: |
+        dir /s /b bin\*.dll        
     
     - name: Copy artifacts
       shell: cmd
       run: |
         mkdir artifacts
         for /r "%GITHUB_WORKSPACE%\bin" %%f in (*.dll) do copy "%%f" artifacts\
-        copy TokenMonitorConfig.json artifacts\ 2>nul        
+        copy TokenMonitorConfig.json artifacts\ 2>nul
+        dir artifacts\        
     
     - name: Upload
       uses: actions/upload-artifact@v4
