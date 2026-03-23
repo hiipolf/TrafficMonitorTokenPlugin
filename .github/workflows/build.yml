@@ -13,17 +13,23 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Build
+    - name: Build (Debug x64)
+      env:
+        VCVARS: "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
       run: |
-        & "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-        msbuild TokenMonitorPlugin.sln /p:Configuration=Release /p:Platform=x64 /m /v:m /nr:false
-        if %ERRORLEVEL% neq 0 exit /b 1        
+        call "%VCVARS%"
+        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir=bin\ /v:minimal
+        if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%        
+    
+    - name: List output
+      run: |
+        dir /s /b bin\*.dll 2>nul || echo "No DLL found"        
     
     - name: Copy artifacts
       run: |
         mkdir artifacts -Force
-        copy "bin\x64\Release\TokenMonitorPlugin.dll" "artifacts\" 2>nul
-        copy TokenMonitorConfig.json "artifacts\" 2>nul        
+        for /r bin %%f in (*.dll) do copy "%%f" artifacts\ 
+        copy TokenMonitorConfig.json artifacts\ 2>nul        
     
     - name: Upload DLL
       uses: actions/upload-artifact@v4
