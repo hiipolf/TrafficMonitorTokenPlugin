@@ -20,23 +20,20 @@ jobs:
         msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:OutDir=bin\ /v:minimal
         if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%        
     
-    - name: Find DLL
-      shell: bash
+    - name: Find DLL location
+      shell: cmd
       run: |
-        cd "$GITHUB_WORKSPACE"
-        find . -name "*.dll" 2>/dev/null
-        ls -la bin/ 2>/dev/null || true        
-    
+        msbuild TokenMonitorPlugin.vcxproj /p:Configuration=Debug /p:Platform=x64 /t:PrintReferences /v:quiet
+        dir /s /b %GITHUB_WORKSPACE%\*.dll 2>nul        
+
     - name: Copy artifacts
-      shell: bash
+      shell: cmd
       run: |
-        cd "$GITHUB_WORKSPACE"
-        mkdir -p artifacts
-        find . -name "*.dll" -exec cp {} artifacts/ \; 2>/dev/null
-        cp TokenMonitorConfig.json artifacts/ 2>/dev/null || true        
+        for /r %GITHUB_WORKSPACE% %%f in (*.dll) do copy "%%f" .
+        dir /b *.dll 2>nul        
     
     - name: Upload DLL
       uses: actions/upload-artifact@v4
       with:
         name: TokenMonitorPlugin-dll
-        path: artifacts/
+        path: .
