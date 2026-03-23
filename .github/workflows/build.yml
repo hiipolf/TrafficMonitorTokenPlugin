@@ -1,0 +1,39 @@
+name: Build DLL
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install Windows SDK
+      run: |
+        Invoke-WebRequest -Uri 'https://download.microsoft.com/download/9/A/5/9A5F7F84-25F4-4670-85B1-EB32F9D87F1E/grmsdkxsd_enu.iso' -OutFile 'grmsdkxsd_enu.iso'
+        7z x grmsdkxsd_enu.iso -oci:sdksetup -y | Out-Null
+        Start-Process -FilePath 'sdksetup\setup.exe' -ArgumentList '/q', '/norestart' -Wait        
+    
+    - name: Build with MSVC
+      run: |
+        msbuild TokenMonitorPlugin.sln /p:Configuration=Release /p:Platform=x64 /m /v:m /nr:false
+        if ($LASTEXITCODE -ne 0) { exit 1 }        
+    
+    - name: Copy artifacts
+      run: |
+        Copy-Item "bin\x64\Release\TokenMonitorPlugin.dll" -Destination "." -Force -ErrorAction SilentlyContinue
+        Copy-Item "TokenMonitorConfig.json" -Destination "." -Force        
+    
+    - name: Upload DLL
+      uses: actions/upload-artifact@v4
+      if: exists("TokenMonitorPlugin.dll")
+      with:
+        name: TokenMonitorPlugin-dll
+        path: |
+          TokenMonitorPlugin.dll
+          TokenMonitorConfig.json      
